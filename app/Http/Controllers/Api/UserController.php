@@ -18,7 +18,7 @@ class UserController extends Controller
 
     public function store(Request $request)
     {
-        // បន្ថែមការឆែកទិន្នន័យ (Validation)
+        // Add Validation for Required Fields and Unique Username
         $validator = Validator::make($request->all(), [
             'Username' => 'required|unique:tblusers,Username',
             'Password' => 'required|min:6',
@@ -41,16 +41,16 @@ class UserController extends Controller
 
     public function show($id)
     {
-        // ប្រើ UserID ជំនួសឱ្យ id ដើម្បីឱ្យច្បាស់លាស់
+        // Use UserID to Find User and Include Student and Teacher Relations, Check if User Exists Before Returning
         $user = User::with(['student', 'teacher'])->find($id);
         return $user ? response()->json(['success' => true, 'data' => $user])
-            : response()->json(['message' => 'រកមិនឃើញអ្នកប្រើប្រាស់នេះទេ'], 404);
+            : response()->json(['message' => 'User not found'], 404);
     }
 
     public function update(Request $request, $id)
     {
         $user = User::find($id);
-        if (!$user) return response()->json(['message' => 'រកមិនឃើញទិន្នន័យ'], 404);
+        if (!$user) return response()->json(['message' => 'User not found'], 404);
 
         if ($request->Password) {
             $user->Password = Hash::make($request->Password);
@@ -63,9 +63,9 @@ class UserController extends Controller
     public function destroy($id)
     {
         $user = User::find($id);
-        if (!$user) return response()->json(['message' => 'រកមិនឃើញទិន្នន័យ'], 404);
+        if (!$user) return response()->json(['message' => 'User not found'], 404);
 
         $user->delete();
-        return response()->json(['success' => true, 'message' => 'លុបទិន្នន័យជោគជ័យ']);
+        return response()->json(['success' => true, 'message' => 'Deleted user data successfully']);
     }
 }
