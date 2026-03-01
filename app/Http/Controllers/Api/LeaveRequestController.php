@@ -12,7 +12,7 @@ class LeaveRequestController extends Controller
 
     public function index()
     {
-        // បង្ហាញសំណើសុំច្បាប់ទាំងអស់ ព្រមជាមួយព័ត៌មានសិស្ស
+        // Show All Leave Requests with Student Info, Ordered by CreatedDate Descending
         $requests = LeaveRequest::with(['student'])->orderBy('CreatedDate', 'desc')->get();
         return response()->json(['success' => true, 'data' => $requests]);
     }
@@ -30,7 +30,7 @@ class LeaveRequestController extends Controller
             return response()->json(['success' => false, 'errors' => $validator->errors()], 422);
         }
 
-        // បន្ថែម Status 'Pending' ជាលំនាំដើម ប្រសិនបើមិនទាន់មាន
+        // Add Default Status as 'Pending' if Not Provided
         $data = $request->all();
         if (!isset($data['Status'])) {
             $data['Status'] = 'Pending';
@@ -43,7 +43,7 @@ class LeaveRequestController extends Controller
     public function show($id)
     {
         $leave = LeaveRequest::with(['student'])->find($id);
-        if (!$leave) return response()->json(['message' => 'រកមិនឃើញសំណើសុំច្បាប់នេះទេ'], 404);
+        if (!$leave) return response()->json(['message' => 'Leave request not found'], 404);
 
         return response()->json(['success' => true, 'data' => $leave]);
     }
@@ -51,9 +51,9 @@ class LeaveRequestController extends Controller
     public function update(Request $request, $id)
     {
         $leave = LeaveRequest::find($id);
-        if (!$leave) return response()->json(['message' => 'រកមិនឃើញទិន្នន័យ'], 404);
+        if (!$leave) return response()->json(['message' => 'Leave request not found'], 404);
 
-        // ប្រើសម្រាប់គ្រូ ឬ Admin ដើម្បី Approve/Reject
+        // Use fillable fields in the model to allow mass assignment for update
         $leave->update($request->all());
         return response()->json(['success' => true, 'data' => $leave]);
     }
@@ -61,9 +61,9 @@ class LeaveRequestController extends Controller
     public function destroy($id)
     {
         $leave = LeaveRequest::find($id);
-        if (!$leave) return response()->json(['message' => 'រកមិនឃើញទិន្នន័យ'], 404);
+        if (!$leave) return response()->json(['message' => 'Leave request not found'], 404);
 
         $leave->delete();
-        return response()->json(['success' => true, 'message' => 'លុបសំណើសុំច្បាប់ជោគជ័យ']);
+        return response()->json(['success' => true, 'message' => 'Deleted leave request successfully']);
     }
 }
