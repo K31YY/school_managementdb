@@ -11,14 +11,14 @@ class StudyController extends Controller
 {
     public function index()
     {
-        // ទាញយកទិន្នន័យសិក្សាជាមួយ Student, Subject និង AcademicYear
+        // Get All Studies with Related Student, Subject, and Academic Year Data, Ordered by CreatedDate Descending
         $studies = Study::with(['student', 'subject', 'academicYear'])->get();
         return response()->json(['success' => true, 'data' => $studies]);
     }
 
     public function store(Request $request)
     {
-        // កែ Key ឱ្យត្រូវតាម fillable ក្នុង Model និង Database
+        // Update Validation to Use Laravel's Validator and Provide Clear Error Messages
         $validator = Validator::make($request->all(), [
             'StuID'           => 'required|exists:tblstudents,StuID',
             'SubID'           => 'required|exists:tblsubjects,SubID',
@@ -36,11 +36,15 @@ class StudyController extends Controller
             return response()->json(['success' => false, 'errors' => $validator->errors()], 422);
         }
 
-        // គណនា TotalScore មុននឹងរក្សាទុក (ស្រេចចិត្ត)
+        // Calculate Total Score as the Sum of Quiz, Homework, AttendanceScore, Participation, Midterm, and Final
         $data = $request->all();
-        $data['TotalScore'] = ($request->Quiz ?? 0) + ($request->Homework ?? 0) + 
-                             ($request->AttendanceScore ?? 0) + ($request->Participation ?? 0) + 
-                             ($request->Midterm ?? 0) + ($request->Final ?? 0);
+        $data['TotalScore'] = 
+        ($request->Quiz ?? 0) + 
+        ($request->Homework ?? 0) +                      
+        ($request->AttendanceScore ?? 0) + 
+        ($request->Participation ?? 0) +                      
+        ($request->Midterm ?? 0) + 
+        ($request->Final ?? 0);
 
         $study = Study::create($data);
         return response()->json(['success' => true, 'data' => $study], 201);
@@ -51,7 +55,7 @@ class StudyController extends Controller
         $study = Study::with(['student', 'subject', 'academicYear'])->find($id);
 
         if (!$study) {
-            return response()->json(['success' => false, 'message' => 'រកមិនឃើញទិន្នន័យសិក្សានេះទេ'], 404);
+            return response()->json(['success' => false, 'message' => 'Study not found'], 404);
         }
         return response()->json(['success' => true, 'data' => $study]);
     }
@@ -59,7 +63,7 @@ class StudyController extends Controller
     public function update(Request $request, $id)
     {
         $study = Study::find($id);
-        if (!$study) return response()->json(['success' => false, 'message' => 'រកមិនឃើញទិន្នន័យ'], 404);
+        if (!$study) return response()->json(['success' => false, 'message' => 'Study not found'], 404);
 
         $study->update($request->all());
         return response()->json(['success' => true, 'data' => $study]);
@@ -68,9 +72,9 @@ class StudyController extends Controller
     public function destroy($id)
     {
         $study = Study::find($id);
-        if (!$study) return response()->json(['success' => false, 'message' => 'រកមិនឃើញទិន្នន័យ'], 404);
+        if (!$study) return response()->json(['success' => false, 'message' => 'Study not found'], 404);
 
         $study->delete();
-        return response()->json(['success' => true, 'message' => 'លុបទិន្នន័យជោគជ័យ']);
+        return response()->json(['success' => true, 'message' => 'Deleted study data successfully']);
     }
 }
