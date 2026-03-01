@@ -17,7 +17,7 @@ class AttendanceController extends Controller
 
     public function store(Request $request)
     {
-        // ១. ករណីកត់វត្តមានសិស្សច្រើននាក់ (Bulk Insert)
+        // Insert Multiple Records (Batch Insert)
         if ($request->has('attendance_data') && is_array($request->attendance_data)) {
             foreach ($request->attendance_data as $record) {
                 Attendance::create([
@@ -28,15 +28,15 @@ class AttendanceController extends Controller
                     'Reason'   => $record['Reason'] ?? null,
                 ]);
             }
-            return response()->json(['success' => true, 'message' => 'កត់វត្តមានសិស្សទាំងអស់ជោគជ័យ'], 201);
+            return response()->json(['success' => true, 'message' => 'Inserted multiple attendance records successfully'], 201);
         }
 
-        // ២. ករណីកត់វត្តមានម្តងម្នាក់ (កែសម្រួល Validation ត្រង់ Status កុំឱ្យឆាប់ Error)
+        // Validation for Single Record
         $validator = Validator::make($request->all(), [
             'StuID'    => 'required|exists:tblstudents,StuID',
             'DetailID' => 'required|exists:tblscheduledetails,DetailID',
             'AttDate'  => 'required|date',
-            'Status'   => 'required|string', // ប្ដូរពី "in:..." មក "string" ដើម្បីកុំឱ្យរើសអើងអក្សរតូចធំ
+            'Status'   => 'required|string',
             'Reason'   => 'nullable|string',
         ]);
 
@@ -58,7 +58,7 @@ class AttendanceController extends Controller
     public function show($id)
     {
         $attendance = Attendance::with(['student', 'scheduleDetail.subject', 'scheduleDetail.teacher'])->find($id);
-        if (!$attendance) return response()->json(['success' => false, 'message' => 'រកមិនឃើញទិន្នន័យ'], 404);
+        if (!$attendance) return response()->json(['success' => false, 'message' => 'Not found'], 404);
         return response()->json(['success' => true, 'data' => $attendance]);
     }
 
@@ -67,12 +67,12 @@ class AttendanceController extends Controller
     $attendance = Attendance::find($id);
 
     if (!$attendance) {
-        return response()->json(['success' => false, 'message' => 'រកមិនឃើញទិន្នន័យ'], 404);
+        return response()->json(['success' => false, 'message' => 'Not found'], 404);
     }
 
-    // បន្ថែម Validation ដើម្បីការពារ Error Column Status
+    // Add validation for the fields that can be updated
     $validator = Validator::make($request->all(), [
-        'Status' => 'required|string|max:50', // កំណត់ប្រវែងអក្សរឱ្យត្រូវតាម Database
+        'Status' => 'required|string|max:50',
         'Reason' => 'nullable|string',
     ]);
 
@@ -80,13 +80,13 @@ class AttendanceController extends Controller
         return response()->json(['success' => false, 'errors' => $validator->errors()], 422);
     }
 
-    // ប្រើ fill() និង save() ដើម្បីឱ្យកាន់តែច្បាស់លាស់
+    // use fillable fields to update the attendance record
     $attendance->fill($request->only(['Status', 'Reason', 'StuID', 'DetailID', 'AttDate']));
     $attendance->save();
 
     return response()->json([
         'success' => true,
-        'message' => 'កែប្រែវត្តមានជោគជ័យ',
+        'message' => 'Updated attendance record successfully',
         'data' => $attendance
     ]);
     }
@@ -94,9 +94,9 @@ class AttendanceController extends Controller
     public function destroy($id)
     {
         $attendance = Attendance::find($id);
-        if (!$attendance) return response()->json(['success' => false, 'message' => 'រកមិនឃើញទិន្នន័យ'], 404);
+        if (!$attendance) return response()->json(['success' => false, 'message' => 'Not found'], 404);
 
         $attendance->delete();
-        return response()->json(['success' => true, 'message' => 'លុបទិន្នន័យវត្តមានជោគជ័យ']);
+        return response()->json(['success' => true, 'message' => 'Deleted attendance record successfully']);
     }
 }
