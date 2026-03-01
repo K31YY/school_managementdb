@@ -12,7 +12,7 @@ class ScheduleController extends Controller
 
     public function index()
     {
-        // បង្ហាញកាលវិភាគជាមួយព័ត៌មានឆ្នាំសិក្សា និងថ្នាក់រៀន
+        // Show All Schedules that are not deleted, with Academic Year and Class Section Info, Ordered by ScheduleID Descending
         $schedules = Schedule::with(['academicYear', 'classSection'])
             ->where('IsDeleted', 0)
             ->get();
@@ -21,7 +21,7 @@ class ScheduleController extends Controller
 
     public function store(Request $request)
     {
-        //  កែឈ្មោះ Key ឱ្យត្រូវតាម Database និងអ្វីដែលអ្នកផ្ញើមកពី Postman
+        //  Update Validation to Use Laravel's Validator and Provide Clear Error Messages
         $validator = Validator::make($request->all(), [
         'YearID'    => 'required|exists:tblacademicyears,YearID',
         'SectionID' => 'required|exists:tblclasssections,SectionID',
@@ -31,7 +31,7 @@ class ScheduleController extends Controller
         return response()->json(['success' => false, 'errors' => $validator->errors()], 422);
     }
 
-    // បង្កើតទិន្នន័យដោយកំណត់ IsDeleted ជា 0
+    // create new schedule with IsDeleted default to 0
     $sch = Schedule::create([
         'YearID'    => $request->YearID,
         'SectionID' => $request->SectionID,
@@ -43,7 +43,7 @@ class ScheduleController extends Controller
 
     public function show($id)
     {
-        // បង្ហាញលម្អិតកាលវិភាគ ព្រមទាំងម៉ោងសិក្សា មុខវិជ្ជា និងគ្រូដែលបង្រៀន
+        // Show Specific Schedule by ID with Academic Year, Class Section, and Schedule Details (Subject, Teacher, Room)
         $schedule = Schedule::with([
             'academicYear',
             'classSection',
@@ -53,7 +53,7 @@ class ScheduleController extends Controller
         ])->find($id);
 
         if (!$schedule || $schedule->IsDeleted == 1) {
-            return response()->json(['message' => 'រកមិនឃើញកាលវិភាគនេះទេ'], 404);
+            return response()->json(['message' => 'Schedule not found or deleted'], 404);
         }
 
         return response()->json(['success' => true, 'data' => $schedule]);
@@ -62,7 +62,7 @@ class ScheduleController extends Controller
     public function update(Request $request, $id)
     {
         $sch = Schedule::find($id);
-        if (!$sch) return response()->json(['message' => 'រកមិនឃើញទិន្នន័យ'], 404);
+        if (!$sch) return response()->json(['message' => 'Schedule not found'], 404);
 
         $sch->update($request->all());
         return response()->json(['success' => true, 'data' => $sch]);
@@ -71,10 +71,10 @@ class ScheduleController extends Controller
     public function destroy($id)
     {
         $sch = Schedule::find($id);
-        if (!$sch) return response()->json(['message' => 'រកមិនឃើញទិន្នន័យ'], 404);
+        if (!$sch) return response()->json(['message' => 'Schedule not found'], 404);
 
         // ប្រើ Soft Delete
         $sch->update(['IsDeleted' => 1]);
-        return response()->json(['success' => true, 'message' => 'លុបកាលវិភាគជោគជ័យ']);
+        return response()->json(['success' => true, 'message' => 'Deleted schedule successfully']);
     }
 }
