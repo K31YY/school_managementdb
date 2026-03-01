@@ -12,7 +12,7 @@ class TeacherController extends Controller
 {
     public function index()
     {
-        // ទាញយកគ្រូដែលមិនទាន់លុប រួមជាមួយព័ត៌មាន User (Username, Role)
+        // Get All Teachers with User Relation, Exclude Deleted Records, Ordered by TeacherID Descending
         $teachers = Teacher::with('user')
             ->where('IsDeleted', 0)
             ->orderBy('TeacherID', 'desc')
@@ -25,7 +25,7 @@ class TeacherController extends Controller
     {
         $validator = Validator::make($request->all(), [
             'TeacherName' => 'required|string|max:255',
-            'UserID'      => 'nullable|exists:tblusers,UserID', // ផ្ទៀងផ្ទាត់ជាមួយ Table Users
+            'UserID'      => 'nullable|exists:tblusers,UserID',
             'Email'       => 'nullable|email|unique:tblteachers,Email',
             'Photo'       => 'nullable|image|mimes:jpeg,png,jpg|max:2048',
         ]);
@@ -34,7 +34,7 @@ class TeacherController extends Controller
             return response()->json(['success' => false, 'errors' => $validator->errors()], 422);
         }
 
-        // ចាត់ចែងការរក្សារុករូបភាព
+        // Image Upload Handling with Default Value if No File is Uploaded
         $path = null;
         if ($request->hasFile('Photo')) {
             $path = $request->file('Photo')->store('teachers', 'public');
@@ -42,7 +42,7 @@ class TeacherController extends Controller
             $path = 'teachers/default.png';
         }
 
-        // បង្កើតទិន្នន័យគ្រូ
+        // create new teacher record with mass assignment, make sure to allow the fields in the Teacher model's $fillable property
         $teacher = Teacher::create([
             'UserID'      => $request->UserID,
             'TeacherName' => $request->TeacherName,
@@ -56,7 +56,7 @@ class TeacherController extends Controller
             'EndDate'     => $request->EndDate,
             'Certificate' => $request->Certificate,
             'Photo'       => $path,
-            'IsDeleted'   => 0, // តម្លៃដើមគឺមិនទាន់លុប
+            'IsDeleted'   => 0,
         ]);
 
         return response()->json(['success' => true, 'data' => $teacher], 201);
@@ -64,11 +64,11 @@ class TeacherController extends Controller
 
     public function show($id)
     {
-        // ទាញទិន្នន័យគ្រូម្នាក់ រួមជាមួយ User Relation
+        // Find Teacher by ID with User Relation, Check if Exists and Not Deleted Before Returning
         $teacher = Teacher::with('user')->find($id);
         
         if (!$teacher || $teacher->IsDeleted == 1) {
-            return response()->json(['message' => 'រកមិនឃើញទិន្នន័យគ្រូទេ'], 404);
+            return response()->json(['message' => 'Teacher not found'], 404);
         }
         return response()->json(['success' => true, 'data' => $teacher]);
     }
@@ -76,12 +76,12 @@ class TeacherController extends Controller
     public function update(Request $request, $id)
     {
         $teacher = Teacher::find($id);
-        if (!$teacher) return response()->json(['message' => 'រកមិនឃើញទិន្នន័យ'], 404);
+        if (!$teacher) return response()->json(['message' => 'Teacher not found'], 404);
 
         $data = $request->except('Photo');
 
         if ($request->hasFile('Photo')) {
-            // លុបរូបចាស់ចោល
+            // Delete Old Photo if Exists and Not Default, Then Store New Photo
             if ($teacher->Photo && $teacher->Photo !== 'teachers/default.png') {
                 Storage::disk('public')->delete($teacher->Photo);
             }
@@ -96,10 +96,10 @@ class TeacherController extends Controller
     public function destroy($id)
     {
         $teacher = Teacher::find($id);
-        if (!$teacher) return response()->json(['message' => 'រកមិនឃើញទិន្នន័យ'], 404);
+        if (!$teacher) return response()->json(['message' => 'Teacher not found'], 404);
 
-        // ប្រើ Soft Delete តាមរចនាសម្ព័ន្ធ Table
+        // Use Soft Delete by Setting IsDeleted to 1 Instead of Deleting the Record from the Database
         $teacher->update(['IsDeleted' => 1]);
-        return response()->json(['success' => true, 'message' => 'លុបគ្រូជោគជ័យ']);
+        return response()->json(['success' => true, 'message' => 'Deleted teacher data successfully']);
     }
 }

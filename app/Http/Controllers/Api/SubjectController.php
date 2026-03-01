@@ -60,7 +60,7 @@ class SubjectController extends Controller
         $subject = Subject::find($id);
         if (!$subject) return response()->json(['message' => 'Subject not found'], 404);
 
-        // ប្រើ Soft Delete ដោយប្ដូរ IsDeleted ទៅជា ១
+        // Use Soft Delete by Setting IsDeleted to 1 Instead of Deleting the Record from the Database
         $subject->update(['IsDeleted' => 1]);
         return response()->json(['success' => true, 'message' => 'Deleted subject data successfully']);
     }
