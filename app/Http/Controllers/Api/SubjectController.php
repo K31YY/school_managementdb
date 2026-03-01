@@ -19,7 +19,7 @@ class SubjectController extends Controller
 
     public function store(Request $request)
     {
-        // កែសម្រួល Validation ឱ្យប្រើ Key "SubName"
+        // Update Validation to Use Laravel's Validator and Provide Clear Error Messages
         $validator = Validator::make($request->all(), [
             'SubName' => 'required|unique:tblsubjects,SubName',
             'Level'   => 'required',
@@ -31,14 +31,14 @@ class SubjectController extends Controller
             return response()->json(['success' => false, 'errors' => $validator->errors()], 422);
         }
 
-        // បញ្ចូលទិន្នន័យដោយប្រើ Key ត្រឹមត្រូវតាម Database
+        // Insert New Subject with IsDeleted Default to 0
         $sub = Subject::create([
             'SubName'     => $request->SubName,
             'Level'       => $request->Level,
             'Credit'      => $request->Credit,
             'Hour'        => $request->Hour,
             'Description' => $request->Description,
-            'IsDeleted'   => 0, // កំណត់តម្លៃដើម
+            'IsDeleted'   => 0,
         ]);
 
         return response()->json(['success' => true, 'data' => $sub], 201);
@@ -47,9 +47,9 @@ class SubjectController extends Controller
     public function update(Request $request, $id)
     {
         $subject = Subject::find($id);
-        if (!$subject) return response()->json(['message' => 'រកមិនឃើញទិន្នន័យ'], 404);
+        if (!$subject) return response()->json(['message' => 'Subject not found'], 404);
 
-        // អនុញ្ញាតឱ្យ Update គ្រប់ Field ដែលមានក្នុង fillable
+        // can add validation here if needed, similar to store method
         $subject->update($request->all());
         
         return response()->json(['success' => true, 'data' => $subject]);
@@ -58,10 +58,10 @@ class SubjectController extends Controller
     public function destroy($id)
     {
         $subject = Subject::find($id);
-        if (!$subject) return response()->json(['message' => 'រកមិនឃើញទិន្នន័យ'], 404);
+        if (!$subject) return response()->json(['message' => 'Subject not found'], 404);
 
         // ប្រើ Soft Delete ដោយប្ដូរ IsDeleted ទៅជា ១
         $subject->update(['IsDeleted' => 1]);
-        return response()->json(['success' => true, 'message' => 'លុបមុខវិជ្ជាជោគជ័យ']);
+        return response()->json(['success' => true, 'message' => 'Deleted subject data successfully']);
     }
 }
