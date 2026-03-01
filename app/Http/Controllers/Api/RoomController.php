@@ -11,7 +11,7 @@ class RoomController extends Controller
 {
     public function index()
     {
-        // បង្ហាញតែបន្ទប់ដែលមិនទាន់លុប និងតម្រៀបតាម ID
+        // Show All Rooms that are not deleted, Ordered by RoomID Descending
         return response()->json([
             'success' => true,
             'data' => Room::where('IsDeleted', 0)->orderBy('RoomID', 'desc')->get()
@@ -29,7 +29,7 @@ class RoomController extends Controller
             return response()->json(['success' => false, 'errors' => $validator->errors()], 422);
         }
 
-        // បង្កើតទិន្នន័យដោយកំណត់ IsDeleted ជា 0 ជា Default
+        // Make sure to set default values for Status and IsDeleted if they are not provided in the request
         $room = Room::create([
             'RoomName' => $request->RoomName,
             'Location' => $request->Location,
@@ -44,9 +44,9 @@ class RoomController extends Controller
     public function show($id)
     {
         $room = Room::find($id);
-        // ឆែកមើល RoomID និងស្ថានភាព IsDeleted
+        // Check if the room exists and is not marked as deleted (IsDeleted = 1) before returning it
         if (!$room || $room->IsDeleted == 1) {
-            return response()->json(['message' => 'រកមិនឃើញបន្ទប់នេះទេ'], 404);
+            return response()->json(['message' => 'Room not found or deleted'], 404);
         }
         return response()->json(['success' => true, 'data' => $room]);
     }
@@ -54,7 +54,7 @@ class RoomController extends Controller
     public function update(Request $request, $id)
     {
         $room = Room::find($id);
-        if (!$room) return response()->json(['message' => 'រកមិនឃើញទិន្នន័យ'], 404);
+        if (!$room) return response()->json(['message' => 'Room not found'], 404);
 
         $room->update($request->all());
         return response()->json(['success' => true, 'data' => $room]);
@@ -63,10 +63,10 @@ class RoomController extends Controller
     public function destroy($id)
     {
         $room = Room::find($id);
-        if (!$room) return response()->json(['message' => 'រកមិនឃើញទិន្នន័យ'], 404);
+        if (!$room) return response()->json(['message' => 'Room not found'], 404);
 
-        // កែប្រែ IsDeleted ទៅជា 1 តាមរចនាសម្ព័ន្ធ Table
+        // Update the IsDeleted field to 1 instead of actually deleting the record from the database
         $room->update(['IsDeleted' => 1]);
-        return response()->json(['success' => true, 'message' => 'លុបបន្ទប់ជោគជ័យ']);
+        return response()->json(['success' => true, 'message' => 'Deleted room successfully']);
     }
 }
