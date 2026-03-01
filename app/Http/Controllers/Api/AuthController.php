@@ -13,33 +13,33 @@ class AuthController extends Controller
 
     public function login(Request $request)
     {
-        // ១. ធ្វើ Validation ដើម្បីធានាថាមានទិន្នន័យផ្ញើមកពិតមែន
+        // Validation for Username and Password
         $validator = Validator::make($request->all(), [
             'Username' => 'required',
             'Password' => 'required',
         ]);
 
         if ($validator->fails()) {
-            return response()->json(['success' => false, 'message' => 'សូមបញ្ចូល Username និង Password'], 400);
+            return response()->json(['success' => false, 'message' => 'Please Input  Username and Password'], 400);
         }
 
-        // ២. ស្វែងរក User តាមរយៈ Username
+        // Find User by Username
         $user = User::where('Username', $request->Username)->first();
 
-        // ៣. ផ្ទៀងផ្ទាត់ User និង Password
+        // ៣. Matching Passsword
         if (!$user || !Hash::check($request->Password, $user->Password)) {
             return response()->json([
                 'success' => false,
-                'message' => 'Username ឬ Password មិនត្រឹមត្រូវទេ'
+                'message' => 'Username or Password Not Match'
             ], 401);
         }
 
-        // ៤. បង្កើត Token
+        // Create Token for API Authentication
         $token = $user->createToken('auth_token')->plainTextToken;
 
         return response()->json([
             'success' => true,
-            'message' => 'ចូលប្រើប្រាស់ជោគជ័យ',
+            'message' => 'Login Successfully',
             'token' => $token,
             'user' => $user
         ]);
@@ -47,8 +47,8 @@ class AuthController extends Controller
 
     public function logout(Request $request)
     {
-        // លុប Token បច្ចុប្បន្នចោល
+        // Revoke the token that was used to authenticate the current request
         $request->user()->currentAccessToken()->delete();
-        return response()->json(['success' => true, 'message' => 'ចាកចេញជោគជ័យ']);
+        return response()->json(['success' => true, 'message' => 'Logout Successfully']);
     }
 }

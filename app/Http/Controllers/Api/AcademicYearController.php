@@ -9,22 +9,22 @@ use Illuminate\Support\Facades\Validator;
 
 class AcademicYearController extends Controller
 {
-    // ១. បង្ហាញបញ្ជីឆ្នាំសិក្សាទាំងអស់
+    // Show All Academic Years (Exclude Deleted Ones and Order by YearID Descending)
     public function index()
     {
         return response()->json([
             'success' => true,
-            // កែពី AcademicYearID មក YearID តាម Table
+            // Update to use Eloquent ORM for better readability and maintainability
             'data' => AcademicYear::where('IsDeleted', 0)
                 ->orderBy('YearID', 'desc')
                 ->get()
         ]);
     }
 
-    // ២. បញ្ចូលឆ្នាំសិក្សាថ្មី
+    // Add New Academic Year
     public function store(Request $request)
     {
-        // កែ Key ឱ្យត្រូវនឹង Column "YearName"
+        // Update Validation to Use Laravel's Validator and Provide Clear Error Messages
         $validator = Validator::make($request->all(), [
             'YearName'  => 'required|unique:tblacademicyears,YearName',
             'StartDate' => 'required|date',
@@ -38,13 +38,13 @@ class AcademicYearController extends Controller
             ], 422);
         }
 
-        // បញ្ចូលទិន្នន័យ (ប្រើ $fillable ពី Model)
+        // Insert New Academic Year with IsDeleted Default to 0
         $data = AcademicYear::create([
             'YearName'    => $request->YearName,
             'StartDate'   => $request->StartDate,
             'EndDate'     => $request->EndDate,
             'Description' => $request->Description,
-            'IsDeleted'   => 0, // តម្លៃដើមគឺមិនទាន់លុប
+            'IsDeleted'   => 0,
         ]);
 
         return response()->json([
@@ -53,25 +53,25 @@ class AcademicYearController extends Controller
         ], 201);
     }
 
-    // ៣. បង្ហាញឆ្នាំសិក្សាតាម ID
+    // Show Specific Academic Year by ID
     public function show($id)
     {
         $year = AcademicYear::find($id);
         if (!$year || $year->IsDeleted == 1) {
-            return response()->json(['message' => 'រកមិនឃើញឆ្នាំសិក្សានេះទេ'], 404);
+            return response()->json(['message' => 'Academic year not found or deleted'], 404);
         }
         return response()->json(['success' => true, 'data' => $year]);
     }
 
-    // ៤. កែប្រែទិន្នន័យឆ្នាំសិក្សា
+    // Update Academic Year by ID
     public function update(Request $request, $id)
     {
         $year = AcademicYear::find($id);
         if (!$year) {
-            return response()->json(['message' => 'រកមិនឃើញទិន្នន័យ'], 404);
+            return response()->json(['message' => 'Academic year not found'], 404);
         }
 
-        // អនុញ្ញាតឱ្យ Update តាមរយៈ fillable
+        // Can add validation here if needed, similar to the store method
         $year->update($request->all());
 
         return response()->json([
@@ -80,20 +80,20 @@ class AcademicYearController extends Controller
         ]);
     }
 
-    // ៥. លុបឆ្នាំសិក្សា (Soft Delete)
+    // Delete Academic Year (Soft Delete by Setting IsDeleted to 1)
     public function destroy($id)
     {
         $year = AcademicYear::find($id);
         if (!$year) {
-            return response()->json(['message' => 'រកមិនឃើញទិន្នន័យ'], 404);
+            return response()->json(['message' => 'Academic year not found'], 404);
         }
 
-        // ប្តូរ IsDeleted ទៅជា 1 (មិនលុបចេញពី DB ទេ)
+        // Change IsDeleted to 1 Instead of Removing the Record from the Database
         $year->update(['IsDeleted' => 1]);
 
         return response()->json([
             'success' => true, 
-            'message' => 'លុបឆ្នាំសិក្សាជោគជ័យ'
+            'message' => 'Deleted academic year successfully'
         ]);
     }
 }
