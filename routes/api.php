@@ -3,7 +3,7 @@
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
-// Import Controllers ទាំងអស់
+// Import Controllers for API Routes
 use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\UserController;
 use App\Http\Controllers\Api\TeacherController;
@@ -26,42 +26,43 @@ use App\Http\Controllers\Api\ReportLogController;
 |--------------------------------------------------------------------------
 */
 
-// 1. ក្រុម Public Routes (មិនទាមទារ Login ទេ - សម្រាប់ Login/Register)
+// Public Routes (No Authentication Required)
 Route::post('/login', [AuthController::class, 'login']);
 Route::post('/register', [AuthController::class, 'register']);
 // Auth Actions
 Route::post('/logout', [AuthController::class, 'logout']);
 Route::get('/user-profile', [AuthController::class, 'profile']);
 
-// 2. ក្រុម Protected Routes (ទាមទារការប្រើប្រាស់ Token/Login ទើបអាចប្រើបាន)
-// ប្រសិនបើអ្នកប្រើ Laravel Sanctum សូមប្រើ middleware('auth:sanctum')
+// Protected Routes (Require Authentication)
+// if you want to protect all routes, you can wrap them in a middleware group like this:
 Route::middleware('auth:sanctum')->group(function () {
 
 
 
-    // ប្រើ apiResource វានឹងបង្កើត Route ទាំង ៥ (index, store, show, update, destroy) ឱ្យអូតូ
+    // use apiResource for CRUD operations on each entity, which automatically creates routes for index, store, show, update, and destroy actions
 
-    // ក្រុមគ្របគ្រង User & Profiles
+    // User Management
     Route::apiResource('users', UserController::class);
     Route::apiResource('teachers', TeacherController::class);
     Route::apiResource('students', StudentController::class);
 
-    // ក្រុមរចនាសម្ព័ន្ធសាលារៀន
+    // School Management
+    Route::apiResource('academic-years', AcademicYearController::class);
     Route::apiResource('academic-years', AcademicYearController::class);
     Route::apiResource('subjects', SubjectController::class);
     Route::apiResource('rooms', RoomController::class);
     Route::apiResource('class-sections', ClassSectionController::class);
 
-    // ក្រុមរៀបចំកាលវិភាគ
+    // Scheduling
     Route::apiResource('schedules', ScheduleController::class);
     Route::apiResource('schedule-details', ScheduleDetailController::class);
 
-    // ក្រុមប្រតិបត្តិការ និងការសិក្សា
+    // Attendance and Studies
     Route::apiResource('attendances', AttendanceController::class);
     Route::apiResource('studies', StudyController::class);
     Route::apiResource('leave-requests', LeaveRequestController::class);
 
-    // ក្រុមប្រព័ន្ធ
+    // Notifications and Report Logs
     Route::apiResource('notifications', NotificationController::class);
     Route::apiResource('report-logs', ReportLogController::class);
 });
