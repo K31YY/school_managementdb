@@ -12,7 +12,7 @@ class ReportLogController extends Controller
 
     public function index()
     {
-        // បង្ហាញ Log ទាំងអស់ជាមួយព័ត៌មានអ្នកប្រើប្រាស់ និងរៀបតាមលំដាប់ថ្មីបំផុត
+        // Show All Report Logs with User Info, Ordered by GeneratedAt Descending
         $logs = ReportLog::with('user')->latest('GeneratedAt')->get();
         return response()->json(['success' => true, 'data' => $logs]);
     }
@@ -40,7 +40,7 @@ class ReportLogController extends Controller
     public function show($id)
     {
         $log = ReportLog::with('user')->find($id);
-        if (!$log) return response()->json(['message' => 'រកមិនឃើញទិន្នន័យ'], 404);
+        if (!$log) return response()->json(['message' => 'Report log not found'], 404);
 
         return response()->json(['success' => true, 'data' => $log]);
     }
@@ -48,9 +48,9 @@ class ReportLogController extends Controller
     public function destroy($id)
     {
         $log = ReportLog::find($id);
-        if (!$log) return response()->json(['message' => 'រកមិនឃើញទិន្នន័យ'], 404);
+        if (!$log) return response()->json(['message' => 'Report log not found'], 404);
 
         $log->delete();
-        return response()->json(['success' => true, 'message' => 'លុប Log ជោគជ័យ']);
+        return response()->json(['success' => true, 'message' => 'Deleted report log successfully']);
     }
 }

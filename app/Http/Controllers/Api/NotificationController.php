@@ -12,7 +12,7 @@ class NotificationController extends Controller
 
     public function index(Request $request)
     {
-        // បង្ហាញការជូនដំណឹងដែលថ្មីៗបំផុត និងអាច Filter តាម UserID
+        // Show All Notifications, Optionally Filter by UserID, Ordered by CreatedDate Descending
         $query = Notification::latest();
 
         if ($request->has('UserID')) {
@@ -44,9 +44,9 @@ class NotificationController extends Controller
     public function show($id)
     {
         $notification = Notification::find($id);
-        if (!$notification) return response()->json(['message' => 'រកមិនឃើញទិន្នន័យ'], 404);
+        if (!$notification) return response()->json(['message' => 'Notification not found'], 404);
 
-        // នៅពេល User ចុចមើល យើងអាចប្តូរវាទៅជា "អានរួច" អូតូតែម្តង
+        // When a notification is viewed, we can mark it as read by updating the IsRead field to 1
         $notification->update(['IsRead' => 1]);
 
         return response()->json(['success' => true, 'data' => $notification]);
@@ -54,7 +54,7 @@ class NotificationController extends Controller
 
     public function update(Request $request, $id)
     {
-        // ប្រើសម្រាប់ប្តូរ Status IsRead ដោយឡែក
+        // Use for updating the IsRead status of a notification, for example, to mark it as read or unread
         $not = Notification::findOrFail($id);
         $not->update(['IsRead' => $request->IsRead]);
         return response()->json(['success' => true, 'data' => $not]);
@@ -63,6 +63,6 @@ class NotificationController extends Controller
     public function destroy($id)
     {
         Notification::findOrFail($id)->delete();
-        return response()->json(['success' => true, 'message' => 'លុបការជូនដំណឹងជោគជ័យ']);
+        return response()->json(['success' => true, 'message' => 'Deleted notification successfully']);
     }
 }
