@@ -11,18 +11,18 @@ class ScheduleDetailController extends Controller
 {
     public function index()
     {
-        // បង្ហាញម៉ោងសិក្សាទាំងអស់ជាមួយព័ត៌មានគ្រូ មុខវិជ្ជា និងបន្ទប់
+        // Show All Schedule Details with Teacher, Subject, Room, and Schedule's Class Section Info, Ordered by DetailID Descending
         $details = ScheduleDetail::with(['teacher', 'subject', 'room', 'schedule.classSection'])->get();
         return response()->json(['success' => true, 'data' => $details]);
     }
 
    public function store(Request $request)
     {
-    // ត្រូវប្រើឈ្មោះ Key ឱ្យដូចក្នុង Postman របស់អ្នកបេះបិទ
+    // must validate the request data before creating a new schedule detail
     $validator = Validator::make($request->all(), [
         'ScheduleID' => 'required|exists:tblschedules,ScheduleID',
         'TeacherID'  => 'required|exists:tblteachers,TeacherID',
-        'SubID'      => 'required|exists:tblsubjects,SubID', // ត្រូវប្រើ SubID តាម Diagram
+        'SubID'      => 'required|exists:tblsubjects,SubID',
         'RoomID'     => 'required|exists:tblrooms,RoomID',
         'DayOfWeek'  => 'required|string',
         'StartTime'  => 'required',
@@ -30,16 +30,16 @@ class ScheduleDetailController extends Controller
     ]);
 
     if ($validator->fails()) {
-        // បើនៅតែ Error វានឹងប្រាប់ថា Key មួយណាដែលខុស
+        // if still fails, return the validation errors in the response with a 422 Unprocessable Entity status code
         return response()->json(['success' => false, 'errors' => $validator->errors()], 422);
     }
 
-    // បង្កើតទិន្នន័យ
+    // Create the schedule detail using mass assignment, make sure to allow the fields in the ScheduleDetail model's $fillable property
     $det = ScheduleDetail::create($request->all());
     
     return response()->json([
         'success' => true, 
-        'message' => 'បញ្ចូលម៉ោងសិក្សាជោគជ័យ',
+        'message' => 'Inserted schedule detail successfully',
         'data' => $det
     ], 201);
     }
@@ -50,7 +50,7 @@ class ScheduleDetailController extends Controller
         $detail = ScheduleDetail::with(['teacher', 'subject', 'room', 'schedule.classSection'])->find($id);
 
         if (!$detail) {
-            return response()->json(['success' => false, 'message' => 'រកមិនឃើញព័ត៌មានម៉ោងសិក្សានេះទេ'], 404);
+            return response()->json(['success' => false, 'message' => 'Schedule detail not found'], 404);
         }
         return response()->json(['success' => true, 'data' => $detail]);
     }
@@ -58,7 +58,7 @@ class ScheduleDetailController extends Controller
     public function update(Request $request, $id)
     {
         $detail = ScheduleDetail::find($id);
-        if (!$detail) return response()->json(['success' => false, 'message' => 'រកមិនឃើញទិន្នន័យ'], 404);
+        if (!$detail) return response()->json(['success' => false, 'message' => 'Schedule detail not found'], 404);
 
         $detail->update($request->all());
         return response()->json(['success' => true, 'data' => $detail]);
@@ -67,9 +67,9 @@ class ScheduleDetailController extends Controller
     public function destroy($id)
     {
         $detail = ScheduleDetail::find($id);
-        if (!$detail) return response()->json(['success' => false, 'message' => 'រកមិនឃើញទិន្នន័យ'], 404);
+        if (!$detail) return response()->json(['success' => false, 'message' => 'Schedule detail not found'], 404);
 
         $detail->delete(); 
-        return response()->json(['success' => true, 'message' => 'លុបម៉ោងសិក្សាជោគជ័យ']);
+        return response()->json(['success' => true, 'message' => 'Deleted schedule detail successfully']);
     }
 }
