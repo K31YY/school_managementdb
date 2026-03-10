@@ -7,128 +7,127 @@ use App\Models\Student;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Validator;
-use Exception;
+use Illuminate\Support\Facades\Hash;
 
 class StudentController extends Controller
 {
-    // Show All Students with User Info, Ordered by StuID Descending and IsDeleted = 0
+    /**
+     * show all students
+     */
     public function index()
     {
-        $students = Student::with('user')
-            ->where('IsDeleted', 0)
-            ->orderBy('StuID', 'desc')
-            ->get();
-
-        return response()->json(['success' => true, 'data' => $students]);
+        $students = Student::where('IsDeleted', 0)->orderBy('StuID', 'desc')->get();
+        return response()->json(['success' => true, 'data' => $students], 200);
     }
 
-    // Insert New Student with Validation and Default Values
+    /**
+     * Create a new student record
+     */
     public function store(Request $request)
     {
+        // Check Required Fields and Unique Email, and Validate Photo Upload
         $validator = Validator::make($request->all(), [
-            'StuNameKH' => 'required|string|max:255',
-            'StuNameEN' => 'required|string|max:255',
-            'Gender'    => 'required',
-            'Email'     => 'nullable|email|unique:tblstudents,Email',
-            'Photo'     => 'nullable|image|mimes:jpeg,png,jpg|max:2048',
+            'StuName'  => 'required|string|max:255',
+            'Email'    => 'required|email|unique:tblstudents,Email',
+            'password' => 'required|min:6',
+            'Gender'   => 'required',
+            'DOB'      => 'required|date',
+            'Phone'    => 'required',
+            'Photo'    => 'nullable|image|mimes:jpeg,png,jpg|max:2048',
         ]);
 
         if ($validator->fails()) {
             return response()->json(['success' => false, 'errors' => $validator->errors()], 422);
         }
 
-        try {
-            // Image Upload Handling with Default Value if No File is Uploaded
-            $path = 'students/default.png';
-            if ($request->hasFile('Photo')) {
-                $path = $request->file('Photo')->store('students', 'public');
-            }
+        // Manage File Upload for Student Photo (if provided), otherwise use default photo
+        $path = $request->hasFile('Photo')
+            ? $request->file('Photo')->store('students', 'public')
+            : 'students/default.png';
 
-            // Insert New Student with Mass Assignment, Make Sure to Allow the Fields in the Student Model's $fillable Property
-            $student = Student::create([
-                // if UserID is not provided in the request, it will be set to null, which is acceptable if the database allows null values for this field
-                'UserID'        => $request->UserID ?? null, 
-                'StuName'       => $request->StuName,
-                'StuNameKH'     => $request->StuNameKH,
-                'StuNameEN'     => $request->StuNameEN,
-                'Gender'        => $request->Gender,
-                'DOB'           => $request->DOB,
-                'POB'           => $request->POB,
-                'Address'       => $request->Address,
-                'Phone'         => $request->Phone,
-                'Email'         => $request->Email,
-                'Promotion'     => $request->Promotion,
-                'Photo'         => $path,
-                'FatherName'    => $request->FatherName,
-                'FatherJob'     => $request->FatherJob,
-                'MotherName'    => $request->MotherName,
-                'MotherJob'     => $request->MotherJob,
-                'FamilyContact' => $request->FamilyContact,
-                'Status'        => $request->Status ?? 1,
-                'IsDeleted'     => 0,
-            ]);
+        // Insert New Student Record with Hashed Password and Default Values for Status and IsDeleted
+        $student = Student::create([
+            'UserID'        => $request->UserID,        
+            'StuName'       => $request->StuName,       
+            'StuNameKH'     => $request->StuNameKH,     
+            'StuNameEN'     => $request->StuNameEN,     
+            'Gender'        => $request->Gender,        
+            'DOB'           => $request->DOB,           
+            'POB'           => $request->POB,           
+            'Address'       => $request->Address,       
+            'Phone'         => $request->Phone,         
+            'Email'         => $request->Email,         
+            'password'      => Hash::make($request->password), 
+            'Promotion'     => $request->Promotion,     
+            'Photo'         => $path,                   
+            'FatherName'    => $request->FatherName,    
+            'FatherJob'     => $request->FatherJob,     
+            'MotherName'    => $request->MotherName,    
+            'MotherJob'     => $request->MotherJob,     
+            'FamilyContact' => $request->FamilyContact, 
+            'Status'        => $request->Status ?? 1,   // Default 1
+            'IsDeleted'     => 0,                       // Default 0
+        ]);
 
-            return response()->json([
-                'success' => true,
-                'message' => 'Inserted student data successfully',
-                'data' => $student
-            ], 201);
-
-        } catch (Exception $e) {
-            // if there is an error during the student creation process, return a JSON response with the error message and a 500 Internal Server Error status code
-            return response()->json([
-                'success' => false,
-                'message' => 'Error: ' . $e->getMessage()
-            ], 500);
-        }
+        return response()->json(['success' => true, 'message' => 'saved successfully', 'data' => $student], 201);
     }
 
-    // show specific student by ID with related user, attendances, studies, and requests data
+    /**
+     * show information of a student by ID (only if not deleted)
+     */
     public function show($id)
     {
-        $student = Student::with(['user', 'attendances', 'studies', 'requests'])->find($id);
-
+        $student = Student::find($id);
         if (!$student || $student->IsDeleted == 1) {
-            return response()->json(['success' => false, 'message' => 'Student not found or deleted'], 404);
+            return response()->json(['success' => false, 'message' => 'student not found'], 404);
         }
-
-        return response()->json(['success' => true, 'data' => $student]);
+        return response()->json(['success' => true, 'data' => $student], 200);
     }
 
-    // Update Student Data with Validation and Image Handling
+    /**
+     * Edit information of a student by ID (including handling password and photo updates)
+     */
     public function update(Request $request, $id)
     {
-        $student = Student::find($id);
-        if (!$student) {
-            return response()->json(['success' => false, 'message' => 'Student not found'], 404);
+        $student = Student::findOrFail($id);
+
+        $validator = Validator::make($request->all(), [
+            'Email' => 'nullable|email|unique:tblstudents,Email,' . $id . ',StuID',
+            'Photo' => 'nullable|image|mimes:jpeg,png,jpg|max:2048',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json(['success' => false, 'errors' => $validator->errors()], 422);
+        }
+
+        // Edit password if provided
+        if ($request->filled('password')) {
+            $student->password = Hash::make($request->password);
         }
 
 
-        try {
-            $data = $request->all();
-            if ($request->hasFile('Photo')) {
-                if ($student->Photo && $student->Photo !== 'students/default.png') {
-                    Storage::disk('public')->delete($student->Photo);
-                }
-                $data['Photo'] = $request->file('Photo')->store('students', 'public');
+        // Edit Photo if provided
+        if ($request->hasFile('Photo')) {
+            if ($student->Photo && $student->Photo !== 'students/default.png') {
+                Storage::disk('public')->delete($student->Photo);
             }
-
-            $student->update($data);
-            return response()->json(['success' => true, 'data' => $student]);
-        } catch (Exception $e) {
-            return response()->json(['success' => false, 'message' => $e->getMessage()], 500);
+            $student->Photo = $request->file('Photo')->store('students', 'public');
         }
+
+        // Edit all other fields except Photo and password (which we handled separately)
+        $student->update($request->except(['Photo', 'password']));
+
+        return response()->json(['success' => true, 'message' => 'updated successfully', 'data' => $student], 200);
     }
 
-    // Delete Student by ID using Soft Delete (IsDeleted = 1)
+    /**
+     * Delete (Soft Delete by Setting IsDeleted to 1)
+     */
     public function destroy($id)
     {
-        $student = Student::find($id);
-        if (!$student) {
-            return response()->json(['success' => false, 'message' => 'Student not found'], 404);
-        }
-
-        $student->update(['IsDeleted' => 1]);
-        return response()->json(['success' => true, 'message' => 'Deleted student data successfully']);
+        $student = Student::findOrFail($id);
+        // change IsDeleted to 1 instead of actually deleting the record
+        $student->update(['IsDeleted' => 1]); 
+        return response()->json(['success' => true, 'message' => 'deleted successfully'], 200);
     }
 }
