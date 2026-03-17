@@ -8,6 +8,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Log;
 
 class StudentController extends Controller
 {
@@ -24,52 +25,49 @@ class StudentController extends Controller
      * Create a new student record
      */
     public function store(Request $request)
-    {
-        // Check Required Fields and Unique Email, and Validate Photo Upload
-        $validator = Validator::make($request->all(), [
-            'StuName'  => 'required|string|max:255',
-            'Email'    => 'required|email|unique:tblstudents,Email',
-            'password' => 'required|min:6',
-            'Gender'   => 'required',
-            'DOB'      => 'required|date',
-            'Phone'    => 'required',
-            'Photo'    => 'nullable|image|mimes:jpeg,png,jpg|max:2048',
-        ]);
+{
+    // Log the full request so you can see it in storage/logs/laravel.log
+    Log::info("Request Data: ", $request->all());
 
-        if ($validator->fails()) {
-            return response()->json(['success' => false, 'errors' => $validator->errors()], 422);
-        }
+    $validator = Validator::make($request->all(), [
+        'StuNameEN' => 'required',
+        'Email'     => 'required|email',
+        'password'  => 'required',
+    ]);
 
-        // Manage File Upload for Student Photo (if provided), otherwise use default photo
-        $path = $request->hasFile('Photo')
+    if ($validator->fails()) {
+        Log::error("Validation Failed: ", $validator->errors()->toArray());
+        return response()->json(['errors' => $validator->errors()], 422);
+    }
+
+    $path = $request->hasFile('Photo')
             ? $request->file('Photo')->store('students', 'public')
             : 'students/default.png';
 
-        // Insert New Student Record with Hashed Password and Default Values for Status and IsDeleted
-        $student = Student::create([
-            'UserID'        => $request->UserID,        
-            'StuName'       => $request->StuName,       
-            'StuNameKH'     => $request->StuNameKH,     
-            'StuNameEN'     => $request->StuNameEN,     
-            'Gender'        => $request->Gender,        
-            'DOB'           => $request->DOB,           
-            'POB'           => $request->POB,           
-            'Address'       => $request->Address,       
-            'Phone'         => $request->Phone,         
-            'Email'         => $request->Email,         
-            'password'      => Hash::make($request->password), 
-            'Promotion'     => $request->Promotion,     
-            'Photo'         => $path,                   
-            'FatherName'    => $request->FatherName,    
-            'FatherJob'     => $request->FatherJob,     
-            'MotherName'    => $request->MotherName,    
-            'MotherJob'     => $request->MotherJob,     
-            'FamilyContact' => $request->FamilyContact, 
-            'Status'        => $request->Status ?? 1,   // Default 1
-            'IsDeleted'     => 0,                       // Default 0
-        ]);
+    Student::create([
+        'UserID'        => $request->UserID, // Make sure DB column is VARCHAR
+        'StuName'       => $request->StuNameEN, 
+        'StuNameKH'     => $request->StuNameKH,
+        'StuNameEN'     => $request->StuNameEN,
+        'Gender'        => $request->Gender,
+        'DOB'           => $request->DOB, // Ensure this is 'YYYY-MM-DD'
+        'POB'           => $request->POB,
+        'Address'       => $request->Address,
+        'Phone'         => $request->Phone,
+        'Email'         => $request->Email,
+        'password'      => Hash::make($request->password),
+        'Promotion'     => $request->Promotion,
+        'Photo'         => $path,
+        'FatherName'    => $request->FatherName,
+        'FatherJob'     => $request->FatherJob,
+        'MotherName'    => $request->MotherName,
+        'MotherJob'     => $request->MotherJob,
+        'FamilyContact' => $request->FamilyContact,
+        'Status'        => 1,
+        'IsDeleted'     => 0,
+    ]);
 
-        return response()->json(['success' => true, 'message' => 'saved successfully', 'data' => $student], 201);
+    return response()->json(['message' => 'Success'], 201);
     }
 
     /**
