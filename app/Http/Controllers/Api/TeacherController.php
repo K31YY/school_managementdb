@@ -25,7 +25,6 @@ class TeacherController extends Controller
      */
     public function store(Request $request)
     {
-    // validate required fields, unique email, and photo upload
     $validator = Validator::make($request->all(), [
         'UserID'      => 'required',
         'TeacherName' => 'required|string',
@@ -39,7 +38,6 @@ class TeacherController extends Controller
 
     try {
         $teacher = new Teacher();
-        // enter data into the teacher model, hash the password, and set IsDeleted to 0 by default
         $teacher->UserID      = $request->UserID; 
         $teacher->TeacherName = $request->TeacherName;
         $teacher->Gender      = $request->Gender;
@@ -54,9 +52,12 @@ class TeacherController extends Controller
         $teacher->Certificate = $request->Certificate;
         $teacher->IsDeleted   = 0;
 
+        // FIXED: Check for file, if not found, set default.png
         if ($request->hasFile('Photo')) {
             $path = $request->file('Photo')->store('teachers', 'public');
             $teacher->Photo = $path;
+        } else {
+            $teacher->Photo = 'teachers/default.png'; 
         }
 
         $teacher->save();
@@ -65,7 +66,7 @@ class TeacherController extends Controller
     } catch (\Exception $e) {
         return response()->json(['success' => false, 'message' => $e->getMessage()], 500);
     }
-    }
+}
 
     /**
      * update teacher record
