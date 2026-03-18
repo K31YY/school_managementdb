@@ -8,83 +8,72 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\Hash;
-use Illuminate\Support\Facades\Log;
 
 class StudentController extends Controller
 {
-    /**
-     * show all students
-     */
     public function index()
     {
         $students = Student::where('IsDeleted', 0)->orderBy('StuID', 'desc')->get();
         return response()->json(['success' => true, 'data' => $students], 200);
     }
 
-    /**
-     * Create a new student record
-     */
     public function store(Request $request)
-{
-    // Log the full request so you can see it in storage/logs/laravel.log
-    Log::info("Request Data: ", $request->all());
-
-    $validator = Validator::make($request->all(), [
-        'StuNameEN' => 'required',
-        'Email'     => 'required|email',
-        'password'  => 'required',
-    ]);
-
-    if ($validator->fails()) {
-        Log::error("Validation Failed: ", $validator->errors()->toArray());
-        return response()->json(['errors' => $validator->errors()], 422);
-    }
-
-    $path = $request->hasFile('Photo')
-            ? $request->file('Photo')->store('students', 'public')
-            : 'students/default.png';
-
-    Student::create([
-        'UserID'        => $request->UserID, // Make sure DB column is VARCHAR
-        'StuName'       => $request->StuNameEN, 
-        'StuNameKH'     => $request->StuNameKH,
-        'StuNameEN'     => $request->StuNameEN,
-        'Gender'        => $request->Gender,
-        'DOB'           => $request->DOB, // Ensure this is 'YYYY-MM-DD'
-        'POB'           => $request->POB,
-        'Address'       => $request->Address,
-        'Phone'         => $request->Phone,
-        'Email'         => $request->Email,
-        'password'      => Hash::make($request->password),
-        'Promotion'     => $request->Promotion,
-        'Photo'         => $path,
-        'FatherName'    => $request->FatherName,
-        'FatherJob'     => $request->FatherJob,
-        'MotherName'    => $request->MotherName,
-        'MotherJob'     => $request->MotherJob,
-        'FamilyContact' => $request->FamilyContact,
-        'Status'        => 1,
-        'IsDeleted'     => 0,
-    ]);
-
-    return response()->json(['message' => 'Success'], 201);
-    }
-
-    /**
-     * show information of a student by ID (only if not deleted)
-     */
-    public function show($id)
     {
-        $student = Student::find($id);
-        if (!$student || $student->IsDeleted == 1) {
-            return response()->json(['success' => false, 'message' => 'student not found'], 404);
+        // 1. Validation
+        $validator = Validator::make($request->all(), [
+            'UserID'    => 'required',
+            'StuNameEN' => 'required',
+            'Email'     => 'required|email|unique:tblstudents,Email',
+            'password'  => 'required|min:6',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json(['success' => false, 'errors' => $validator->errors()], 422);
         }
-        return response()->json(['success' => true, 'data' => $student], 200);
+
+        try {
+            $student = new Student();
+            
+            // 2. Assignment (Ensure names match migration exactly)
+            $student->UserID        = $request->UserID;
+            $student->StuName       = $request->StuName;
+            $student->StuNameKH     = $request->StuNameKH;
+            $student->StuNameEN     = $request->StuNameEN;
+            $student->Gender        = $request->Gender;
+            $student->DOB           = $request->DOB;
+            $student->POB           = $request->POB;
+            $student->Address       = $request->Address;
+            $student->Phone         = $request->Phone;
+            $student->Email         = $request->Email;
+            
+            // NOTE: If your Student Model has 'password' => 'hashed' in casts, 
+            // do NOT use Hash::make here. Just save the plain text.
+            $student->password      = $request->password; 
+            
+            $student->Promotion     = $request->Promotion;
+            $student->FatherName    = $request->FatherName;
+            $student->FatherJob     = $request->FatherJob;
+            $student->MotherName    = $request->MotherName;
+            $student->MotherJob     = $request->MotherJob;
+            $student->FamilyContact = $request->FamilyContact;
+            $student->Status        = $request->Status ?? 1;
+            $student->IsDeleted     = 0;
+
+            if ($request->hasFile('Photo')) {
+                $student->Photo = $request->file('Photo')->store('students', 'public');
+            } else {
+                $student->Photo = 'students/default.png';
+            }
+
+            $student->save();
+            return response()->json(['success' => true, 'message' => 'Saved successfully'], 201);
+
+        } catch (\Exception $e) {
+            // This returns the exact error (like missing column or foreign key error)
+            return response()->json(['success' => false, 'message' => $e->getMessage()], 500);
+        }
     }
 
-    /**
-     * Edit information of a student by ID (including handling password and photo updates)
-     */
     public function update(Request $request, $id)
     {
         $student = Student::findOrFail($id);
@@ -98,13 +87,10 @@ class StudentController extends Controller
             return response()->json(['success' => false, 'errors' => $validator->errors()], 422);
         }
 
-        // Edit password if provided
         if ($request->filled('password')) {
             $student->password = Hash::make($request->password);
         }
 
-
-        // Edit Photo if provided
         if ($request->hasFile('Photo')) {
             if ($student->Photo && $student->Photo !== 'students/default.png') {
                 Storage::disk('public')->delete($student->Photo);
@@ -112,20 +98,14 @@ class StudentController extends Controller
             $student->Photo = $request->file('Photo')->store('students', 'public');
         }
 
-        // Edit all other fields except Photo and password (which we handled separately)
         $student->update($request->except(['Photo', 'password']));
-
-        return response()->json(['success' => true, 'message' => 'updated successfully', 'data' => $student], 200);
+        return response()->json(['success' => true, 'message' => 'Updated successfully'], 200);
     }
 
-    /**
-     * Delete (Soft Delete by Setting IsDeleted to 1)
-     */
     public function destroy($id)
     {
         $student = Student::findOrFail($id);
-        // change IsDeleted to 1 instead of actually deleting the record
         $student->update(['IsDeleted' => 1]); 
-        return response()->json(['success' => true, 'message' => 'deleted successfully'], 200);
+        return response()->json(['success' => true, 'message' => 'Deleted successfully'], 200);
     }
 }
