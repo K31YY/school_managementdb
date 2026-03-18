@@ -14,28 +14,12 @@ class Student extends Authenticatable
     protected $table = 'tblstudents';
     protected $primaryKey = 'StuID';
 
-    protected $fillable = [
-        'UserID',
-        'StuName',
-        'StuNameKH',
-        'StuNameEN',
-        'Gender',
-        'DOB',
-        'POB',
-        'Address',
-        'Phone',
-        'Email',
-        'password',
-        'Promotion',
-        'Photo',
-        'FatherName',
-        'FatherJob',
-        'MotherName',
-        'MotherJob',
-        'FamilyContact',
-        'Status',
-        'IsDeleted'
-    ];
+   protected $fillable = [
+    'UserID', 'StuName', 'StuNameKH', 'StuNameEN', 'Gender', 'DOB', 'POB', 
+    'Address', 'Phone', 'Email', 'password', 'Promotion', 'Photo', 
+    'FatherName', 'FatherJob', 'MotherName', 'MotherJob', 'FamilyContact', 
+    'Status', 'IsDeleted'
+];
 
     protected $hidden = [
         'password',
