@@ -27,43 +27,44 @@ use App\Http\Controllers\Api\DashboardController;
 |--------------------------------------------------------------------------
 */
 
-// 1. ក្រុម Public Routes (មិនទាមទារ Login ទេ - សម្រាប់ Login/Register)
+// Public Routes (not requiring Token/Login)
 Route::post('/login', [AuthController::class, 'login']);
 Route::post('/register', [AuthController::class, 'register']);
 // Auth Actions
 Route::post('/logout', [AuthController::class, 'logout']);
 Route::get('/user-profile', [AuthController::class, 'profile']);
 
-// 2. ក្រុម Protected Routes (ទាមទារការប្រើប្រាស់ Token/Login ទើបអាចប្រើបាន)
-// ប្រសិនបើអ្នកប្រើ Laravel Sanctum សូមប្រើ middleware('auth:sanctum')
+// Protected Routes (requiring Token/Login) - if Laravel Passport please use middleware('auth:api')
+// if using Laravel Sanctum, use middleware('auth:sanctum')
 Route::middleware('auth:sanctum')->group(function () {
-
-    // ១. Route សម្រាប់ Dashboard Counts (គ្រូ និង សិស្ស)
+    
+    Route::post('/change-password', [App\Http\Controllers\Api\AuthController::class, 'changePassword']);
+    // Route::get('/dashboard-data', [DashboardController::class, 'getDashboardData']);
     Route::get('/dashboard-counts', [DashboardController::class, 'getCounts']);
 
-    // ប្រើ apiResource វានឹងបង្កើត Route ទាំង ៥ (index, store, show, update, destroy) ឱ្យអូតូ
+    // Grouping routes by functionality for better organization
 
-    // ក្រុមគ្របគ្រង User & Profiles
+    // Group User, Teacher, Student Management
     Route::apiResource('users', UserController::class);
     Route::apiResource('teachers', TeacherController::class);
     Route::apiResource('students', StudentController::class);
 
-    // ក្រុមរចនាសម្ព័ន្ធសាលារៀន
+    // Group Academic Management
     Route::apiResource('academic-years', AcademicYearController::class);
     Route::apiResource('subjects', SubjectController::class);
     Route::apiResource('rooms', RoomController::class);
     Route::apiResource('class-sections', ClassSectionController::class);
 
-    // ក្រុមរៀបចំកាលវិភាគ
+    // Group Schedule Management
     Route::apiResource('schedules', ScheduleController::class);
     Route::apiResource('schedule-details', ScheduleDetailController::class);
 
-    // ក្រុមប្រតិបត្តិការ និងការសិក្សា
+    // Group Attendance and Study Management
     Route::apiResource('attendances', AttendanceController::class);
     Route::apiResource('studies', StudyController::class);
     Route::apiResource('leave-requests', LeaveRequestController::class);
 
-    // ក្រុមប្រព័ន្ធ
+    // Group Notification and Report Management
     Route::apiResource('notifications', NotificationController::class);
     Route::apiResource('report-logs', ReportLogController::class);
 });

@@ -4,13 +4,16 @@ namespace App\Models;
 
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
-use Laravel\Sanctum\HasApiTokens; // use for API Token Authentication
+use Laravel\Sanctum\HasApiTokens;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 
 class Teacher extends Authenticatable
 {
-    use HasApiTokens, Notifiable; // use HasApiTokens for API Token Authentication
+    use HasApiTokens, HasFactory, Notifiable;
 
     protected $table = 'tblteachers';
+    
+    // Rigorous Check: Ensure this matches TeacherID used in TeacherController and AuthController
     protected $primaryKey = 'TeacherID';
 
     protected $fillable = [
@@ -32,28 +35,37 @@ class Teacher extends Authenticatable
 
     protected $hidden = [
         'password',
-        'remember_token', // must be hidden for security
+        'remember_token',
     ];
 
     /**
-     * manage data type casting for certain fields
+     * Data Type Casting
      */
     protected function casts(): array
     {
         return [
-            'password' => 'hashed', // bettween Laravel 10/11, you can give Laravel the hint to automatically hash the password when saving by using 'hashed' cast
-            'DOB' => 'date',
+            // ANALYTICAL NOTE: Removed 'password' => 'hashed' to avoid double-hashing
+            // since you use Hash::make() in your TeacherController.
+            'DOB'       => 'date',
             'StartDate' => 'date',
-            'EndDate' => 'date',
+            'EndDate'   => 'date',
+            'IsDeleted' => 'boolean',
         ];
     }
 
-    // Relationships
+    // --- Relationships ---
+
+    /**
+     * Link back to the central Admin/User table
+     */
     public function user()
     {
         return $this->belongsTo(User::class, 'UserID', 'UserID');
     }
 
+    /**
+     * Link to schedule details
+     */
     public function scheduleDetails()
     {
         return $this->hasMany(ScheduleDetail::class, 'TeacherID', 'TeacherID');
