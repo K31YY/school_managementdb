@@ -2,24 +2,26 @@
 
 namespace App\Models;
 
-// change to Authenticatable and add HasApiTokens for API Token Authentication
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
-use Laravel\Sanctum\HasApiTokens; // use for API Token Authentication
+use Laravel\Sanctum\HasApiTokens;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 
 class Student extends Authenticatable
 {
-    use HasApiTokens, Notifiable;
+    use HasApiTokens, HasFactory, Notifiable;
 
     protected $table = 'tblstudents';
+    
+    // Logic: Ensure this matches your actual database column name
     protected $primaryKey = 'StuID';
 
-   protected $fillable = [
-    'UserID', 'StuName', 'StuNameKH', 'StuNameEN', 'Gender', 'DOB', 'POB', 
-    'Address', 'Phone', 'Email', 'password', 'Promotion', 'Photo', 
-    'FatherName', 'FatherJob', 'MotherName', 'MotherJob', 'FamilyContact', 
-    'Status', 'IsDeleted'
-];
+    protected $fillable = [
+        'UserID', 'StuName', 'StuNameKH', 'StuNameEN', 'Gender', 'DOB', 'POB', 
+        'Address', 'Phone', 'Email', 'password', 'Promotion', 'Photo', 
+        'FatherName', 'FatherJob', 'MotherName', 'MotherJob', 'FamilyContact', 
+        'Status', 'IsDeleted'
+    ];
 
     protected $hidden = [
         'password',
@@ -27,12 +29,13 @@ class Student extends Authenticatable
     ];
 
     /**
-     * make Laravel automatically hash the password when saving
+     * Analytical Correction: We removed 'password' => 'hashed' 
+     * to prevent double-hashing because your AuthController 
+     * already hashes the password manually.
      */
     protected function casts(): array
     {
         return [
-            'password' => 'hashed', // give Laravel the hint to automatically hash the password when saving (Laravel 10/11 feature)
             'DOB' => 'date',
             'Status' => 'boolean',
             'IsDeleted' => 'boolean',
@@ -40,6 +43,10 @@ class Student extends Authenticatable
     }
 
     // --- Relationships ---
+
+    /**
+     * Link back to the central User table
+     */
     public function user()
     {
         return $this->belongsTo(User::class, 'UserID', 'UserID');
