@@ -13,13 +13,13 @@ class SubjectController extends Controller
     {
         return response()->json([
             'success' => true,
+            // Correctly filters active subjects
             'data' => Subject::where('IsDeleted', 0)->orderBy('SubID', 'desc')->get()
         ]);
     }
 
     public function store(Request $request)
     {
-        // Update Validation to Use Laravel's Validator and Provide Clear Error Messages
         $validator = Validator::make($request->all(), [
             'SubName' => 'required|unique:tblsubjects,SubName',
             'Level'   => 'required',
@@ -31,7 +31,7 @@ class SubjectController extends Controller
             return response()->json(['success' => false, 'errors' => $validator->errors()], 422);
         }
 
-        // Insert New Subject with IsDeleted Default to 0
+        // Mass assignment works now that IsDeleted is added to Model
         $sub = Subject::create([
             'SubName'     => $request->SubName,
             'Level'       => $request->Level,
@@ -49,7 +49,17 @@ class SubjectController extends Controller
         $subject = Subject::find($id);
         if (!$subject) return response()->json(['message' => 'Subject not found'], 404);
 
-        // can add validation here if needed, similar to store method
+        // CRITICAL FIX: Validation for Update
+        // This allows the current record to keep its name but prevents duplicates with others
+        $validator = Validator::make($request->all(), [
+            'SubName' => 'sometimes|required|unique:tblsubjects,SubName,'.$id.',SubID',
+            'Level'   => 'sometimes|required',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json(['success' => false, 'errors' => $validator->errors()], 422);
+        }
+
         $subject->update($request->all());
         
         return response()->json(['success' => true, 'data' => $subject]);
@@ -57,11 +67,12 @@ class SubjectController extends Controller
 
     public function destroy($id)
     {
+        // find($id) works because primaryKey is set to SubID in the Model
         $subject = Subject::find($id);
         if (!$subject) return response()->json(['message' => 'Subject not found'], 404);
 
-        // Use Soft Delete by Setting IsDeleted to 1 Instead of Deleting the Record from the Database
-        $subject->update(['IsDeleted' => 1]);
-        return response()->json(['success' => true, 'message' => 'Deleted subject data successfully']);
+        // Correct soft-delete logic
+        $subject->update(['IsDeleted' => 1]); 
+        return response()->json(['success' => true, 'message' => 'Deleted successfully']);
     }
 }
