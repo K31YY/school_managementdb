@@ -8,7 +8,9 @@ class Schedule extends Model
 {
     protected $table = 'tblschedules';
     protected $primaryKey = 'ScheduleID';
-    protected $fillable = ['YearID', 'SectionID'];
+    protected $fillable = ['YearID', 'SectionID', 'IsDeleted']; // Add IsDeleted here
+
+    public $timestamps = false;
 
     public function academicYear()
     {
