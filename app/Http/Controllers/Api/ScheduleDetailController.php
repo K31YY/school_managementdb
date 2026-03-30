@@ -9,67 +9,72 @@ use Illuminate\Support\Facades\Validator;
 
 class ScheduleDetailController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
-        // Show All Schedule Details with Teacher, Subject, Room, and Schedule's Class Section Info, Ordered by DetailID Descending
-        $details = ScheduleDetail::with(['teacher', 'subject', 'room', 'schedule.classSection'])->get();
-        return response()->json(['success' => true, 'data' => $details]);
-    }
+        // Get Schedule Details with related info,
+        $query = ScheduleDetail::with([
+            'subject', 
+            'teacher', 
+            'room', 
+            'schedule.academicYear', 
+            'schedule.classSection'
+        ])->where('IsDeleted', 0);
 
-   public function store(Request $request)
-    {
-    // must validate the request data before creating a new schedule detail
-    $validator = Validator::make($request->all(), [
-        'ScheduleID' => 'required|exists:tblschedules,ScheduleID',
-        'TeacherID'  => 'required|exists:tblteachers,TeacherID',
-        'SubID'      => 'required|exists:tblsubjects,SubID',
-        'RoomID'     => 'required|exists:tblrooms,RoomID',
-        'DayOfWeek'  => 'required|string',
-        'StartTime'  => 'required',
-        'EndTime'    => 'required',
-    ]);
-
-    if ($validator->fails()) {
-        // if still fails, return the validation errors in the response with a 422 Unprocessable Entity status code
-        return response()->json(['success' => false, 'errors' => $validator->errors()], 422);
-    }
-
-    // Create the schedule detail using mass assignment, make sure to allow the fields in the ScheduleDetail model's $fillable property
-    $det = ScheduleDetail::create($request->all());
-    
-    return response()->json([
-        'success' => true, 
-        'message' => 'Inserted schedule detail successfully',
-        'data' => $det
-    ], 201);
-    }
-
-
-    public function show($id)
-    {
-        $detail = ScheduleDetail::with(['teacher', 'subject', 'room', 'schedule.classSection'])->find($id);
-
-        if (!$detail) {
-            return response()->json(['success' => false, 'message' => 'Schedule detail not found'], 404);
+        // filter by schedule if provided (e.g., for a specific class section)
+        if ($request && $request->has('section_id')) {
+            $query->whereHas('schedule', function($q) use ($request) {
+                $q->where('SectionID', $request->section_id);
+            });
         }
-        return response()->json(['success' => true, 'data' => $detail]);
+
+        $details = $query->orderBy('StartTime', 'asc')->get();
+
+        return response()->json([
+            'success' => true, 
+            'data' => $details
+        ], 200);
+    }
+
+    public function store(Request $request)
+    {
+        $validator = Validator::make($request->all(), [
+            'ScheduleID' => 'required|exists:tblschedules,ScheduleID',
+            'TeacherID'  => 'required|exists:tblteachers,TeacherID',
+            'SubID'      => 'required|exists:tblsubjects,SubID',
+            'RoomID'     => 'required|exists:tblrooms,RoomID',
+            'DayOfWeek'  => 'required|string',
+            'StartTime'  => 'required',
+            'EndTime'    => 'required',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json(['success' => false, 'errors' => $validator->errors()], 422);
+        }
+
+        $det = ScheduleDetail::create($request->all());
+        $det->load(['subject', 'teacher', 'room']);
+
+        return response()->json(['success' => true, 'data' => $det], 201);
     }
 
     public function update(Request $request, $id)
     {
         $detail = ScheduleDetail::find($id);
-        if (!$detail) return response()->json(['success' => false, 'message' => 'Schedule detail not found'], 404);
+        if (!$detail) return response()->json(['success' => false, 'message' => 'Not found'], 404);
 
         $detail->update($request->all());
+        $detail->load(['subject', 'teacher', 'room']);
+
         return response()->json(['success' => true, 'data' => $detail]);
     }
 
     public function destroy($id)
     {
         $detail = ScheduleDetail::find($id);
-        if (!$detail) return response()->json(['success' => false, 'message' => 'Schedule detail not found'], 404);
-
-        $detail->delete(); 
-        return response()->json(['success' => true, 'message' => 'Deleted schedule detail successfully']);
+        if ($detail) {
+            $detail->update(['IsDeleted' => 1]);
+            return response()->json(['success' => true]);
+        }
+        return response()->json(['success' => false], 404);
     }
 }
