@@ -6,8 +6,61 @@ use App\Http\Controllers\Controller;
 use App\Models\Study;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
+use App\Models\Student;
 class StudyController extends Controller
 {
+
+    // function to get the results of the logged-in student, calculate grades, and group by semester
+    public function myResults(Request $request)
+{
+    try {
+        // find the student linked to the logged-in user
+        $student = $request->user(); 
+
+        if (!$student) {
+            return response()->json(['success' => false, 'message' => 'Unauthorized'], 401);
+        }
+
+        // get the studies with the subject relationship
+        $results = \App\Models\Study::with(['subject'])
+            ->where('StuID', $student->StuID)
+            ->get()
+            ->map(function ($item) {
+                // if Grade is empty, calculate it based on TotalScore
+                if (empty($item->Grade)) {
+                    $score = $item->TotalScore; // assuming TotalScore is already calculated and stored in the database
+
+                    if ($score >= 90) $item->Grade = 'A';
+                    elseif ($score >= 80) $item->Grade = 'B';
+                    elseif ($score >= 70) $item->Grade = 'C';
+                    elseif ($score >= 60) $item->Grade = 'D';
+                    elseif ($score >= 50) $item->Grade = 'E';
+                    else $item->Grade = 'F';
+                }
+                return $item;
+            });
+
+        // manage the results by grouping them by semester
+        $grouped = $results->groupBy('Semester');
+
+        return response()->json([
+            'success' => true,
+            'data' => $grouped
+        ]);
+
+    } catch (\Exception $e) {
+        return response()->json([
+            'success' => false,
+            'message' => 'Error: ' . $e->getMessage()
+        ], 500);
+    }
+}
+
+
+
+
+
+
     public function index()
     {
    // Get All Studies with Related Student, Subject, and Academic Year Data, Ordered by CreatedDate Descending
