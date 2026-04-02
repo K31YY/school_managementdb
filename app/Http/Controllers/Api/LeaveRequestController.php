@@ -19,26 +19,28 @@ class LeaveRequestController extends Controller
 
     public function store(Request $request)
     {
-        $validator = Validator::make($request->all(), [
-            'StudentID' => 'required|exists:tblstudents,StudentID',
-            'StartDate' => 'required|date',
-            'EndDate'   => 'required|date|after_or_equal:StartDate',
-            'Reason'    => 'required'
-        ]);
+    // update field validation and set default value for Status if not provided
+    $validator = Validator::make($request->all(), [
+        'StuID'         => 'required|exists:tblstudents,StuID',
+        'DateRequested' => 'required|date',
+        'Reason'        => 'required|string',
+        'Status'        => 'nullable|string'
+    ]);
 
-        if ($validator->fails()) {
-            return response()->json(['success' => false, 'errors' => $validator->errors()], 422);
-        }
-
-        // Add Default Status as 'Pending' if Not Provided
-        $data = $request->all();
-        if (!isset($data['Status'])) {
-            $data['Status'] = 'Pending';
-        }
-
-        $leave = LeaveRequest::create($data);
-        return response()->json(['success' => true, 'data' => $leave], 201);
+    if ($validator->fails()) {
+        return response()->json(['success' => false, 'errors' => $validator->errors()], 422);
     }
+
+    // manage default value for Status if not provided in the request
+    $data = $request->all();
+    if (!isset($data['Status'])) {
+        $data['Status'] = 'Pending';
+    }
+
+    $leave = LeaveRequest::create($data);
+    return response()->json(['success' => true, 'data' => $leave], 201);
+    }
+
 
     public function show($id)
     {

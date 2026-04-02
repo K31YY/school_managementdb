@@ -1,6 +1,5 @@
 <?php
 
-use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\UserController;
@@ -47,7 +46,7 @@ use App\Http\Controllers\Api\DashboardController;
     Route::get('/my-profile', [StudentController::class, 'myProfile']);
     // for get student results 
     Route::get('/my-results', [StudyController::class, 'myResults']);
-
+    Route::get('/studies/check', [StudyController::class, 'checkScore']);
     Route::post('/change-password', [App\Http\Controllers\Api\AuthController::class, 'changePassword']);
 
     // Route::get('/dashboard-data', [DashboardController::class, 'getDashboardData']);
