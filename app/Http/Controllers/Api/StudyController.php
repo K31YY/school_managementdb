@@ -9,6 +9,22 @@ use Illuminate\Support\Facades\Validator;
 use App\Models\Student;
 class StudyController extends Controller
 {
+    public function checkScore(Request $request) 
+    {
+    // get data from request and validate it
+    $study = Study::with(['student', 'subject', 'academicYear'])
+        ->where('StuID', $request->StuID)
+        ->where('SubID', $request->SubID)
+        ->where('Semester', $request->Semester)
+        ->first(); // get the first matching record, or null if not found
+
+    if ($study) {
+        return response()->json(['success' => true, 'data' => $study]);
+    }
+
+    return response()->json(['success' => false, 'message' => 'No score found']);
+    }
+
 
     // function to get the results of the logged-in student, calculate grades, and group by semester
     public function myResults(Request $request)
