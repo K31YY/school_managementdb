@@ -57,7 +57,7 @@ class ScheduleDetailController extends Controller
         return response()->json(['success' => true, 'data' => $det], 201);
     }
 
-    public function update(Request $request, $id)
+    public function update(Request $request, int $id)
     {
         $detail = ScheduleDetail::find($id);
         if (!$detail) return response()->json(['success' => false, 'message' => 'Not found'], 404);
@@ -68,7 +68,7 @@ class ScheduleDetailController extends Controller
         return response()->json(['success' => true, 'data' => $detail]);
     }
 
-    public function destroy($id)
+    public function destroy(int $id)
     {
         $detail = ScheduleDetail::find($id);
         if ($detail) {

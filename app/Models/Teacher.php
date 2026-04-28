@@ -10,7 +10,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 class Teacher extends Authenticatable
 {
     use HasApiTokens, HasFactory, Notifiable;
-
+    
     protected $table = 'tblteachers';
     
     // Rigorous Check: Ensure this matches TeacherID used in TeacherController and AuthController

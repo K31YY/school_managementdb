@@ -21,7 +21,7 @@ class StudentController extends Controller
 
         if (!$student) {
             return response()->json([
-                'success' => false, 
+                'success' => false,
                 'message' => 'Student not found'
             ], 404);
         }
@@ -29,6 +29,19 @@ class StudentController extends Controller
         return response()->json([
             'success' => true,
             'data' => $student
+        ], 200);
+    }
+
+    public function reportStudentList(Request $request)
+    {
+        // Get all students who are not deleted, ordered by name in ascending order
+        $students = \App\Models\Student::where('IsDeleted', 0)
+            ->orderBy('StuNameKH', 'asc')
+            ->get();
+
+        return response()->json([
+            'success' => true,
+            'data' => $students
         ], 200);
     }
 
@@ -40,7 +53,7 @@ class StudentController extends Controller
         $students = Student::where('IsDeleted', 0)
             ->orderBy('StuID', 'desc')
             ->get();
-            
+
         return response()->json(['success' => true, 'data' => $students], 200);
     }
 
@@ -79,11 +92,10 @@ class StudentController extends Controller
             $student = Student::create($data);
 
             return response()->json([
-                'success' => true, 
-                'message' => 'Store successful', 
+                'success' => true,
+                'message' => 'Store successful',
                 'data' => $student
             ], 201);
-
         } catch (\Exception $e) {
             return response()->json(['success' => false, 'message' => $e->getMessage()], 500);
         }
@@ -92,7 +104,7 @@ class StudentController extends Controller
     /**
      * update (Update)
      */
-    public function update(Request $request, $id)
+    public function update(Request $request, int $id)
     {
         $student = Student::findOrFail($id);
 
@@ -126,8 +138,8 @@ class StudentController extends Controller
         $student->update($data);
 
         return response()->json([
-            'success' => true, 
-            'message' => 'Update successful', 
+            'success' => true,
+            'message' => 'Update successful',
             'data' => $student
         ], 200);
     }
@@ -135,7 +147,7 @@ class StudentController extends Controller
     /**
      * 5. Delete data (Soft Delete)
      */
-    public function destroy($id)
+    public function destroy(int $id)
     {
         $student = Student::findOrFail($id);
         $student->update(['IsDeleted' => 1]);

@@ -6,10 +6,101 @@ use App\Http\Controllers\Controller;
 use App\Models\Attendance;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
+use Illuminate\Support\Facades\DB;
 use Exception;
 
 class AttendanceController extends Controller
 {
+
+    public function getAbsentToday()
+    {
+        try {
+            $today = now()->format('Y-m-d');
+
+            // get all attendance records for today where status is 'A' (Absent) and include student details
+            $absents = Attendance::with('student')
+                ->where('AttDate', $today)
+                ->where('Status', 'A')
+                ->get();
+
+            return response()->json([
+                'success' => true,
+                'data' => $absents->map(function ($item) {
+                    return [
+                        'StuNameKH' => $item->student->StuName ?? 'N/A',
+                        'ClassName' => 'Grade 12',
+                    ];
+                })
+            ]);
+        } catch (\Exception $e) {
+            return response()->json(['success' => false, 'message' => $e->getMessage()]);
+        }
+    }
+    public function attendanceReport(Request $request)
+    {
+        try {
+            $stuID = $request->stu_id;
+            $fromDate = $request->from;
+            $toDate = $request->to;
+
+            $results = DB::table('tblattendances')
+                ->join('tblscheduledetails', 'tblattendances.DetailID', '=', 'tblscheduledetails.DetailID')
+                ->join('tblsubjects', 'tblscheduledetails.SubID', '=', 'tblsubjects.SubID')
+                ->select([
+                    'tblattendances.AttDate as date',
+                    'tblsubjects.SubName as subject',
+                    'tblattendances.Status as status'
+                ])
+                ->where('tblattendances.StuID', $stuID)
+                ->whereBetween('tblattendances.AttDate', [$fromDate, $toDate])
+                ->orderBy('tblattendances.AttDate', 'asc')
+                ->get();
+
+            return response()->json([
+                'success' => true,
+                'data' => $results
+            ]);
+        } catch (\Exception $e) {
+            return response()->json(['success' => false, 'message' => $e->getMessage()], 500);
+        }
+    }
+
+    public function myAttendance(Request $request)
+    {
+        try {
+            $student = $request->user();
+
+            $query = DB::table('tblattendances')
+                ->join('tblscheduledetails', 'tblattendances.DetailID', '=', 'tblscheduledetails.DetailID')
+                ->join('tblsubjects', 'tblscheduledetails.SubID', '=', 'tblsubjects.SubID')
+                ->select([
+                    'tblsubjects.SubName as SubjectName',
+                    DB::raw("SUM(CASE WHEN tblattendances.Status = 'P' THEN 1 ELSE 0 END) as present_count"),
+                    DB::raw("SUM(CASE WHEN tblattendances.Status = 'A' THEN 1 ELSE 0 END) as absent_count")
+                ])
+                ->where('tblattendances.StuID', $student->StuID);
+
+            if ($request->month) {
+                $query->whereMonth('tblattendances.AttDate', $request->month);
+            }
+
+            if ($request->year) {
+                $query->whereYear('tblattendances.AttDate', $request->year);
+            }
+
+            $results = $query->groupBy('tblsubjects.SubName')->get();
+
+            return response()->json([
+                'success' => true,
+                'data' => $results
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => $e->getMessage()
+            ], 500);
+        }
+    }
     // show all attendance records with student and subject details
     public function index()
     {
@@ -73,17 +164,16 @@ class AttendanceController extends Controller
             ]);
 
             return response()->json(['success' => true, 'data' => $att], 201);
-
         } catch (Exception $e) {
             return response()->json(['success' => false, 'message' => 'Database Error: ' . $e->getMessage()], 500);
         }
     }
 
     // show attendance by id with student and subject details
-    public function show($id)
+    public function show(int $id)
     {
         $attendance = Attendance::with(['student', 'scheduleDetail.subject', 'scheduleDetail.teacher'])->find($id);
-        
+
         if (!$attendance) {
             return response()->json(['success' => false, 'message' => 'attendance not found'], 404);
         }
@@ -91,7 +181,7 @@ class AttendanceController extends Controller
     }
 
     // update attendance
-    public function update(Request $request, $id)
+    public function update(Request $request, int $id)
     {
         try {
             $attendance = Attendance::find($id);
@@ -123,10 +213,10 @@ class AttendanceController extends Controller
     }
 
     // delete attendance record
-    public function destroy($id)
+    public function destroy(int $id)
     {
         $attendance = Attendance::find($id);
-        
+
         if (!$attendance) {
             return response()->json(['success' => false, 'message' => 'attendance not found'], 404);
         }
