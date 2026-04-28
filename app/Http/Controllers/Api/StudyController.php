@@ -6,71 +6,100 @@ use App\Http\Controllers\Controller;
 use App\Models\Study;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
+use Illuminate\Support\Facades\DB;
 use App\Models\Student;
+
 class StudyController extends Controller
 {
-    public function checkScore(Request $request) 
+
+    public function checkScore(Request $request)
     {
-    // get data from request and validate it
-    $study = Study::with(['student', 'subject', 'academicYear'])
-        ->where('StuID', $request->StuID)
-        ->where('SubID', $request->SubID)
-        ->where('Semester', $request->Semester)
-        ->first(); // get the first matching record, or null if not found
+        // get data from request and validate it
+        $study = Study::with(['student', 'subject', 'academicYear'])
+            ->where('StuID', $request->StuID)
+            ->where('SubID', $request->SubID)
+            ->where('Semester', $request->Semester)
+            ->first(); // get the first matching record, or null if not found
 
-    if ($study) {
-        return response()->json(['success' => true, 'data' => $study]);
-    }
-
-    return response()->json(['success' => false, 'message' => 'No score found']);
-    }
-
-
-    // function to get the results of the logged-in student, calculate grades, and group by semester
-    public function myResults(Request $request)
-{
-    try {
-        // find the student linked to the logged-in user
-        $student = $request->user(); 
-
-        if (!$student) {
-            return response()->json(['success' => false, 'message' => 'Unauthorized'], 401);
+        if ($study) {
+            return response()->json(['success' => true, 'data' => $study]);
         }
 
-        // get the studies with the subject relationship
-        $results = \App\Models\Study::with(['subject'])
-            ->where('StuID', $student->StuID)
-            ->get()
-            ->map(function ($item) {
-                // if Grade is empty, calculate it based on TotalScore
-                if (empty($item->Grade)) {
-                    $score = $item->TotalScore; // assuming TotalScore is already calculated and stored in the database
+        return response()->json(['success' => false, 'message' => 'No score found']);
+    }
 
-                    if ($score >= 90) $item->Grade = 'A';
-                    elseif ($score >= 80) $item->Grade = 'B';
-                    elseif ($score >= 70) $item->Grade = 'C';
-                    elseif ($score >= 60) $item->Grade = 'D';
-                    elseif ($score >= 50) $item->Grade = 'E';
-                    else $item->Grade = 'F';
-                }
-                return $item;
-            });
+    // add function to get scores by class and semester
+    public function getScoresByClass(Request $request)
+    {
+        $semester = $request->query('Semester');
+        $stuID = $request->query('StuID'); // get StuID from query parameters, can be "all" or specific student ID
 
-        // manage the results by grouping them by semester
-        $grouped = $results->groupBy('Semester');
+        // create query to get studies with related student and subject data, filtered by semester and optionally by student ID
+        $query = \App\Models\Study::with(['student', 'subject'])
+            ->where('Semester', $semester);
+
+        // function to filter by student ID if provided and not "all"
+        if ($stuID && $stuID !== 'all') {
+            $query->where('StuID', $stuID);
+        }
+
+        $scores = $query->get()->map(function ($item) {
+            // calculate grade based on TotalScore if Grade is empty
+            $s = $item->TotalScore;
+            $item->Grade = ($s >= 90) ? 'A' : (($s >= 80) ? 'B' : (($s >= 70) ? 'C' : (($s >= 60) ? 'D' : (($s >= 50) ? 'E' : 'F'))));
+            return $item;
+        });
 
         return response()->json([
             'success' => true,
-            'data' => $grouped
+            'data' => $scores
         ]);
-
-    } catch (\Exception $e) {
-        return response()->json([
-            'success' => false,
-            'message' => 'Error: ' . $e->getMessage()
-        ], 500);
     }
-}
+
+    // function to get the results of the logged-in student, calculate grades, and group by semester
+    public function myResults(Request $request)
+    {
+        try {
+            // find the student linked to the logged-in user
+            $student = $request->user();
+
+            if (!$student) {
+                return response()->json(['success' => false, 'message' => 'Unauthorized'], 401);
+            }
+
+            // get the studies with the subject relationship
+            $results = \App\Models\Study::with(['subject'])
+                ->where('StuID', $student->StuID)
+                ->get()
+                ->map(function ($item) {
+                    // if Grade is empty, calculate it based on TotalScore
+                    if (empty($item->Grade)) {
+                        $score = $item->TotalScore; // assuming TotalScore is already calculated and stored in the database
+
+                        if ($score >= 90) $item->Grade = 'A';
+                        elseif ($score >= 80) $item->Grade = 'B';
+                        elseif ($score >= 70) $item->Grade = 'C';
+                        elseif ($score >= 60) $item->Grade = 'D';
+                        elseif ($score >= 50) $item->Grade = 'E';
+                        else $item->Grade = 'F';
+                    }
+                    return $item;
+                });
+
+            // manage the results by grouping them by semester
+            $grouped = $results->groupBy('Semester');
+
+            return response()->json([
+                'success' => true,
+                'data' => $grouped
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Error: ' . $e->getMessage()
+            ], 500);
+        }
+    }
 
 
 
@@ -79,7 +108,7 @@ class StudyController extends Controller
 
     public function index()
     {
-   // Get All Studies with Related Student, Subject, and Academic Year Data, Ordered by CreatedDate Descending
+        // Get All Studies with Related Student, Subject, and Academic Year Data, Ordered by CreatedDate Descending
         $studies = Study::with(['student', 'subject', 'academicYear'])->get();
         return response()->json(['success' => true, 'data' => $studies]);
     }
@@ -106,17 +135,17 @@ class StudyController extends Controller
         // Calculate Total Score as the Sum of Quiz, Homework, AttendanceScore, Participation, Midterm, and Final
         $data = $request->all();
         $data['TotalScore'] =
-        ($request->Quiz ?? 0) +
-        ($request->Homework ?? 0) +                      
-        ($request->AttendanceScore ?? 0) +
-        ($request->Participation ?? 0) +                      
-        ($request->Midterm ?? 0) +
-        ($request->Final ?? 0);
+            ($request->Quiz ?? 0) +
+            ($request->Homework ?? 0) +
+            ($request->AttendanceScore ?? 0) +
+            ($request->Participation ?? 0) +
+            ($request->Midterm ?? 0) +
+            ($request->Final ?? 0);
         $study = Study::create($data);
         return response()->json(['success' => true, 'data' => $study], 201);
     }
 
-    public function show($id)
+    public function show(int $id)
     {
         $study = Study::with(['student', 'subject', 'academicYear'])->find($id);
         if (!$study) {
@@ -125,7 +154,7 @@ class StudyController extends Controller
         return response()->json(['success' => true, 'data' => $study]);
     }
 
-    public function update(Request $request, $id)
+    public function update(Request $request, int $id)
     {
         $study = Study::find($id);
         if (!$study) return response()->json(['success' => false, 'message' => 'Study not found'], 404);
@@ -133,7 +162,7 @@ class StudyController extends Controller
         return response()->json(['success' => true, 'data' => $study]);
     }
 
-    public function destroy($id)
+    public function destroy(int $id)
     {
         $study = Study::find($id);
         if (!$study) return response()->json(['success' => false, 'message' => 'Study not found'], 404);
@@ -142,15 +171,15 @@ class StudyController extends Controller
     }
     public function getMyResults(Request $request)
     {
-    // Find student ID linked to the logged-in user
-    $student = \App\Models\Student::where('UserID', $request->user()->id)->first();
-    if (!$student) {
-        return response()->json(['success' => false, 'message' => 'No student linked to this user'], 404);
-    }
-    // Get studies with the subject relationship
-    $results = \App\Models\Study::with(['subject'])
-        ->where('StuID', $student->StuID)
-        ->get();
-    return response()->json(['success' => true, 'data' => $results], 200);
+        // Find student ID linked to the logged-in user
+        $student = \App\Models\Student::where('UserID', $request->user()->id)->first();
+        if (!$student) {
+            return response()->json(['success' => false, 'message' => 'No student linked to this user'], 404);
+        }
+        // Get studies with the subject relationship
+        $results = \App\Models\Study::with(['subject'])
+            ->where('StuID', $student->StuID)
+            ->get();
+        return response()->json(['success' => true, 'data' => $results], 200);
     }
 }

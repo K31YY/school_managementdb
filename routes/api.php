@@ -32,17 +32,28 @@ use App\Http\Controllers\Api\DashboardController;
 
 
 
-    // Public Routes (not requiring Token/Login)
-    Route::post('/login', [AuthController::class, 'login']);
-    Route::post('/register', [AuthController::class, 'register']);
+// Public Routes (not requiring Token/Login)
+Route::post('/login', [AuthController::class, 'login']);
+Route::post('/register', [AuthController::class, 'register']);
 
-    // Auth Actions
-    Route::post('/logout', [AuthController::class, 'logout']);
-    Route::get('/user-profile', [AuthController::class, 'profile']);
+// Auth Actions
+Route::post('/logout', [AuthController::class, 'logout']);
+Route::get('/user-profile', [AuthController::class, 'profile']);
 
-    // Protected Routes (requiring Token/Login) - if Laravel Passport please use middleware('auth:api')
-    // if using Laravel Sanctum, use middleware('auth:sanctum')
-    Route::middleware('auth:sanctum')->group(function () {
+// Protected Routes (requiring Token/Login) - if Laravel Passport please use middleware('auth:api')
+// if using Laravel Sanctum, use middleware('auth:sanctum')
+Route::middleware('auth:sanctum')->group(function () {
+    Route::get('/absent-students-today', [AttendanceController::class, 'getAbsentToday']);
+    Route::get('/attendance-report', [AttendanceController::class, 'attendanceReport']);
+    Route::get('/scores-by-class', [StudyController::class, 'getScoresByClass']);
+    Route::get('/students/report', [App\Http\Controllers\Api\StudentController::class, 'reportStudentList']);
+    // for get class sections list
+    Route::get('/sections/list', [ClassSectionController::class, 'getSectionList']);
+    // for get student attendance records
+    Route::get('/my-attendance', [AttendanceController::class, 'myAttendance']);
+    // for teacher to get attendance records of their students
+    Route::post('/attendance/store', [AttendanceController::class, 'store']);
+
     Route::get('/my-profile', [StudentController::class, 'myProfile']);
     // for get student results 
     Route::get('/my-results', [StudyController::class, 'myResults']);

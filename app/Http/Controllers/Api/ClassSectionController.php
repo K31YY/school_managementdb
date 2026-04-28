@@ -9,6 +9,22 @@ use Illuminate\Support\Facades\Validator;
 
 class ClassSectionController extends Controller
 {
+    public function getSectionList()
+    {
+        try {
+            // Get all section names where IsDeleted is 0, ordered by SectionID in descending order
+            $sections = ClassSection::where('IsDeleted', 0)
+                ->pluck('SectionName');
+
+            return response()->json([
+                'success' => true,
+                'data' => $sections
+            ]);
+        } catch (\Exception $e) {
+            return response()->json(['success' => false, 'message' => $e->getMessage()], 500);
+        }
+    }
+    
     public function index()
     {
         // Added with('academicYear') to ensure Flutter can display the year name
@@ -41,7 +57,7 @@ class ClassSectionController extends Controller
         return response()->json(['success' => true, 'data' => $sec], 201);
     }
 
-    public function update(Request $request, $id)
+    public function update(Request $request, int $id)
     {
         $section = ClassSection::where('IsDeleted', 0)->find($id);
         
@@ -65,7 +81,7 @@ class ClassSectionController extends Controller
         return response()->json(['success' => true, 'data' => $section]);
     }
 
-    public function destroy($id)
+    public function destroy(int $id)
     {
         $section = ClassSection::find($id);
         if (!$section) return response()->json(['success' => false, 'message' => 'Section not found'], 404);
